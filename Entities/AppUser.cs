@@ -10,6 +10,6 @@ public class AppUser
     public required byte[] PasswordSalt { get; set; }
 
     //Navigation Property
-    public Member Member { get; set; }  
+    public required Member Member { get; set; }  
     
 }
