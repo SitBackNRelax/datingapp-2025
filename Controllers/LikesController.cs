@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
 
-public class LikesController(ILikesRepository likeRepository) : BaseAPIController
+public class LikesController(IunitOfWork uow) : BaseAPIController
 {
     [HttpPost("{targetMemberId}")]
     public async Task<ActionResult> ToggleLike(string targetMemberId)
@@ -17,7 +17,7 @@ public class LikesController(ILikesRepository likeRepository) : BaseAPIControlle
 
         if (sourceMemberId == targetMemberId) return BadRequest("You cannot like yourself");
 
-        var existingLike = await likeRepository.GetMemberLike(sourceMemberId, targetMemberId);
+        var existingLike = await uow.LikesRepository.GetMemberLike(sourceMemberId, targetMemberId);
 
         if (existingLike == null)
         {
@@ -27,14 +27,14 @@ public class LikesController(ILikesRepository likeRepository) : BaseAPIControlle
                 TargetMemberId = targetMemberId
             };
 
-            likeRepository.AddLike(like);
+            uow.LikesRepository.AddLike(like);
         }
         else
         {
-            likeRepository.DeleteLike(existingLike);
+            uow.LikesRepository.DeleteLike(existingLike);
         }
 
-        if (await likeRepository.SaveAllChanges()) return Ok();
+        if (await uow.Complete()) return Ok();
 
         return BadRequest("Failed to update like");
     }
@@ -42,7 +42,7 @@ public class LikesController(ILikesRepository likeRepository) : BaseAPIControlle
     [HttpGet("list")]
     public async Task<ActionResult<IReadOnlyList<string>>> GetCurrentMemberLikeIds()
     {
-        return Ok(await likeRepository.GetCurrentMemberLikeIds(User.GetMemberId()));
+        return Ok(await uow.LikesRepository.GetCurrentMemberLikeIds(User.GetMemberId()));
     }
 
     [HttpGet]
@@ -50,7 +50,7 @@ public class LikesController(ILikesRepository likeRepository) : BaseAPIControlle
         [FromQuery] LikesParams likesParams)
     {
         likesParams.MemberId = User.GetMemberId();
-        var members = await likeRepository.GetMemberLikes(likesParams);
+        var members = await uow.LikesRepository.GetMemberLikes(likesParams);
 
         return Ok(members);
     }
